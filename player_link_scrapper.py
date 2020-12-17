@@ -1,6 +1,7 @@
 from typing import Dict
 
 import pandas as pd
+from settings import CHROMEDRIVER_PATH
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.chrome.options import Options
@@ -10,7 +11,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
-CHROMEDRIVER_PATH = 'source/chromedriver.exe'
 capabilities = DesiredCapabilities.CHROME
 capabilities["pageLoadStrategy"] = "eager"
 
@@ -26,7 +26,7 @@ class PlayersSearch:
         self.driver = driver
 
     @classmethod
-    def load(cls, headless=True):
+    def load(cls, headless=False):
         options = Options()
         options.headless = headless
         driver = webdriver.Chrome(CHROMEDRIVER_PATH, options=options,
@@ -69,6 +69,7 @@ p.get_player_list({'position': "Forwards"})
 i = 0
 while True:
     urls = pd.DataFrame({'url': p.get_page_urls()})
+    print(urls)
     if i == 0:
         urls.to_csv('forwards.csv', mode='a', index=False)
         i += 1
