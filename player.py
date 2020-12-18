@@ -28,8 +28,9 @@ class Object:
 class Player(Object):
     file = 'Player.csv'
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, url, name, **kwargs):
         self.url = url
+        self.name = name
         super().__init__(**kwargs)
 
     def save(self):
@@ -67,6 +68,9 @@ class PlayerPage:
         driver.get(url)
         return cls(driver)
 
+    def close(self):
+        self.driver.close()
+
     def get_name(self):
         return self.driver.find_element_by_class_name(self.name_field).text
 
@@ -94,16 +98,16 @@ def gather_player_info(url):
     name = player_page.get_name()
     info = player_page.get_personal_info()
     stats = player_page.get_statistics()
-    info['name'] = name
-    player = Player(url, **info)
+    player = Player(url, name, **info)
     player_season_stats = PlayerSeasonStats(player.id, stats)
     player_season_stats.save()
     player.save()
+    player_page.close()
 
 
 if __name__ == '__main__':
     df = pd.read_csv('source/forwards_clean.csv')
-    num_processes = mp.cpu_count() - 2
+    num_processes = mp.cpu_count() - 4
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))
 
