@@ -2,17 +2,18 @@ import uuid
 import os
 import tqdm
 import pandas as pd
-import multiprocessing as mp
+from selenium.common.exceptions import NoSuchElementException
 from multiprocessing import Pool
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from settings import CHROMEDRIVER_PATH
-
+from tor import Tor
 
 url_file = 'source/forwards_clean.csv'
 capabilities = DesiredCapabilities.CHROME
 capabilities["pageLoadStrategy"] = "eager"
+proxy = 'socks5://127.0.0.1:9050'
 
 
 class Object:
@@ -62,11 +63,16 @@ class PlayerPage:
     @classmethod
     def load(cls, url, headless=True):
         options = Options()
+        options.add_argument('--proxy-server=%s' % proxy)
         options.headless = headless
         driver = webdriver.Chrome(CHROMEDRIVER_PATH, options=options,
                                   desired_capabilities=capabilities)
         driver.get(url)
-        return cls(driver)
+        try:
+            if driver.find_element_by_class_name(cls.name_field):
+                return cls(driver)
+        except NoSuchElementException:
+            raise KeyError("Page not loaded correctly")
 
     def close(self):
         self.driver.close()
@@ -94,7 +100,13 @@ class PlayerPage:
 
 
 def gather_player_info(url):
-    player_page = PlayerPage.load(url)
+    while True:
+        try:
+            player_page = PlayerPage.load(url)
+            break
+        except KeyError:
+            Tor.renew_connection()
+            print(Tor.get_ip())
     name = player_page.get_name()
     info = player_page.get_personal_info()
     stats = player_page.get_statistics()
