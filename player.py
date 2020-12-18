@@ -107,7 +107,7 @@ def gather_player_info(url):
 
 if __name__ == '__main__':
     df = pd.read_csv('source/forwards_clean.csv')
-    num_processes = mp.cpu_count() - 4
+    num_processes = 6
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))
 
