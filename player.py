@@ -69,10 +69,10 @@ class PlayerPage:
                                   desired_capabilities=capabilities)
         driver.get(url)
         try:
-            if driver.find_element_by_class_name(cls.name_field):
-                return cls(driver)
+            driver.find_element_by_class_name(cls.name_field)
         except NoSuchElementException:
             raise KeyError("Page not loaded correctly")
+        return cls(driver)
 
     def close(self):
         self.driver.close()
@@ -106,7 +106,6 @@ def gather_player_info(url):
             break
         except KeyError:
             Tor.renew_connection()
-            print(Tor.get_ip())
     name = player_page.get_name()
     info = player_page.get_personal_info()
     stats = player_page.get_statistics()
@@ -119,7 +118,7 @@ def gather_player_info(url):
 
 if __name__ == '__main__':
     df = pd.read_csv('source/forwards_clean.csv')
-    num_processes = 6
+    num_processes = 12
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))
 
