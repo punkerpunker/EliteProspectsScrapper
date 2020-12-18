@@ -1,8 +1,11 @@
 import uuid
+import os
+import tqdm
 import pandas as pd
+import multiprocessing as mp
+from multiprocessing import Pool
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from settings import CHROMEDRIVER_PATH
 
@@ -13,13 +16,10 @@ capabilities["pageLoadStrategy"] = "eager"
 
 
 class Object:
-    fields = []
-
     def __init__(self, **kwargs):
         self.id = str(uuid.uuid4())
         for field in kwargs:
-            if field in self.fields:
-                setattr(self, field, kwargs[field])
+            setattr(self, field, kwargs[field])
 
     def __repr__(self):
         return str(vars(self))
@@ -32,13 +32,22 @@ class Player(Object):
         self.url = url
         super().__init__(**kwargs)
 
+    def save(self):
+        pd.DataFrame([vars(self)]).to_csv(self.file, header=not os.path.isfile(self.file), mode='a')
 
-class PlayerRegularSeasonStats(Object):
-    file = 'PlayerRegularSeasonStats.csv'
 
-    def __init__(self, player_id, **kwargs):
-        self.player_id = player_id
-        super().__init__(**kwargs)
+class PlayerSeasonStats:
+    file = 'PlayerSeasonStats.csv'
+
+    def __init__(self, player_id, stats):
+        self.stats = stats
+        self.stats['player_id'] = player_id
+
+    def __repr__(self):
+        return str(self.stats)
+
+    def save(self):
+        self.stats.to_csv(self.file, header=not os.path.isfile(self.file), mode='a')
 
 
 class PlayerPage:
@@ -50,7 +59,7 @@ class PlayerPage:
         self.driver = driver
 
     @classmethod
-    def load(cls, url, headless=False):
+    def load(cls, url, headless=True):
         options = Options()
         options.headless = headless
         driver = webdriver.Chrome(CHROMEDRIVER_PATH, options=options,
@@ -80,10 +89,21 @@ class PlayerPage:
         return stats
 
 
-df = pd.read_csv('source/forwards_clean.csv')
-for index, row in df.iterrows():
-    player_page = PlayerPage.load(row['url'])
-    print(player_page.get_name())
-    print(player_page.get_personal_info())
-    print(player_page.get_statistics())
-    break
+def gather_player_info(url):
+    player_page = PlayerPage.load(url)
+    name = player_page.get_name()
+    info = player_page.get_personal_info()
+    stats = player_page.get_statistics()
+    info['name'] = name
+    player = Player(url, **info)
+    player_season_stats = PlayerSeasonStats(player.id, stats)
+    player_season_stats.save()
+    player.save()
+
+
+if __name__ == '__main__':
+    df = pd.read_csv('source/forwards_clean.csv')
+    num_processes = mp.cpu_count() - 2
+    with Pool(num_processes) as p:
+        list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))
+
