@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS public.player
     "Agency" text COLLATE pg_catalog."default",
     "Highlights" text COLLATE pg_catalog."default",
     "Status" text COLLATE pg_catalog."default",
-    "NHL Draft" text COLLATE pg_catalog."default"
+    "NHL Draft" text COLLATE pg_catalog."default",
+    "Rankings" text COLLATE pg_catalog."default"
 )
 
 TABLESPACE pg_default;
