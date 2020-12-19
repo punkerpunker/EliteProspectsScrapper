@@ -125,7 +125,7 @@ def gather_player_info(url):
         player_season_stats = PlayerSeasonStats(player.id, stats)
         player_season_stats.save()
         player.save()
-        player_page.close()
+    player_page.close()
 
 
 if __name__ == '__main__':
