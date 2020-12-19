@@ -1,19 +1,24 @@
 import uuid
-import os
 import tqdm
 import pandas as pd
-from selenium.common.exceptions import NoSuchElementException
+import sqlalchemy
 from multiprocessing import Pool
+from selenium.common.exceptions import NoSuchElementException
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from settings import CHROMEDRIVER_PATH
 from tor import Tor
 
-url_file = 'source/forwards_clean.csv'
 capabilities = DesiredCapabilities.CHROME
 capabilities["pageLoadStrategy"] = "eager"
 proxy = 'socks5://127.0.0.1:9050'
+db_name = 'postgres'
+db_hostname = 'localhost'
+db_user = 'postgres'
+db_password = 'Vazhega1'
+db_table = 'players_list'
+engine = sqlalchemy.create_engine(f'postgresql+psycopg2://{db_user}:{db_password}@{db_hostname}/{db_name}')
 
 
 class Object:
@@ -27,7 +32,7 @@ class Object:
 
 
 class Player(Object):
-    file = 'Player.csv'
+    table = 'player'
 
     def __init__(self, url, name, **kwargs):
         self.url = url
@@ -35,11 +40,13 @@ class Player(Object):
         super().__init__(**kwargs)
 
     def save(self):
-        pd.DataFrame([vars(self)]).to_csv(self.file, header=not os.path.isfile(self.file), mode='a')
+        pd.DataFrame([vars(self)]).to_sql(self.table, con=engine, index=False, if_exists='append')
+        with engine.connect() as con:
+            con.execute(f"""UPDATE {db_table} set checked = 1 where url = '{self.url}'""")
 
 
 class PlayerSeasonStats:
-    file = 'PlayerSeasonStats.csv'
+    table = 'player_season'
 
     def __init__(self, player_id, stats):
         self.stats = stats
@@ -49,7 +56,7 @@ class PlayerSeasonStats:
         return str(self.stats)
 
     def save(self):
-        self.stats.to_csv(self.file, header=not os.path.isfile(self.file), mode='a')
+        self.stats.to_sql(self.table, con=engine, index=False, if_exists='append')
 
 
 class PlayerPage:
@@ -92,7 +99,10 @@ class PlayerPage:
         return info
 
     def get_statistics(self):
-        stats_table = self.driver.find_element_by_id(self.stats_table_id)
+        try:
+            stats_table = self.driver.find_element_by_id(self.stats_table_id)
+        except NoSuchElementException:
+            return {}
         table = stats_table.find_element_by_xpath(".//table[contains(@class, player-stats)]")
         stats = pd.read_html(table.get_attribute('outerHTML'))[0]
         stats['S'] = stats['S'].fillna(method='ffill')
@@ -117,7 +127,7 @@ def gather_player_info(url):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('source/forwards_clean.csv')
+    df = pd.read_sql(f'select * from {db_table}', engine)
     num_processes = 12
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))

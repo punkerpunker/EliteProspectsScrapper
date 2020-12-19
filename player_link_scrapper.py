@@ -1,5 +1,5 @@
 from typing import Dict
-
+import sqlalchemy
 import pandas as pd
 from settings import CHROMEDRIVER_PATH
 from selenium import webdriver
@@ -13,6 +13,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 capabilities = DesiredCapabilities.CHROME
 capabilities["pageLoadStrategy"] = "eager"
+db_name = 'postgres'
+db_hostname = 'localhost'
+db_user = 'postgres'
+db_password = 'Vazhega1'
+db_table = 'players_list'
 
 
 class PlayersSearch:
@@ -63,20 +68,32 @@ class PlayersSearch:
         self.driver.quit()
 
 
-p = PlayersSearch.load()
-p.get_player_list({'position': "Forwards"})
+def save_table(df):
+    df['checked'] = 0
+    engine = sqlalchemy.create_engine(f'postgresql+psycopg2://{db_user}:{db_password}@{db_hostname}/{db_name}')
+    df.to_sql(db_table, con=engine, index=False)
+    with engine.connect() as con:
+        con.execute(f"""CREATE INDEX url_index_btree ON {db_table} USING btree(url)""")
 
-i = 0
-while True:
-    urls = pd.DataFrame({'url': p.get_page_urls()})
-    print(urls)
-    if i == 0:
-        urls.to_csv('forwards.csv', mode='a', index=False)
-        i += 1
-    else:
-        urls.to_csv('forwards.csv', mode='a', index=False, header=False)
-    try:
-        p.next_page()
-    except NoSuchElementException:
-        p.quit()
-        break
+
+if __name__ == '__main__':
+    filename = 'forwards.csv'
+    p = PlayersSearch.load()
+    p.get_player_list({'position': "Forwards"})
+
+    i = 0
+    while True:
+        urls = pd.DataFrame({'url': p.get_page_urls()})
+        print(urls)
+        if i == 0:
+            urls.to_csv(filename, mode='a', index=False)
+            i += 1
+        else:
+            urls.to_csv(filename, mode='a', index=False, header=False)
+        try:
+            p.next_page()
+        except NoSuchElementException:
+            p.quit()
+            break
+    urls = pd.read_csv(filename)
+    save_table(urls)
