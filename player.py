@@ -102,7 +102,7 @@ class PlayerPage:
         try:
             stats_table = self.driver.find_element_by_id(self.stats_table_id)
         except NoSuchElementException:
-            return {}
+            return None
         table = stats_table.find_element_by_xpath(".//table[contains(@class, player-stats)]")
         stats = pd.read_html(table.get_attribute('outerHTML'))[0]
         stats['S'] = stats['S'].fillna(method='ffill')
@@ -119,11 +119,12 @@ def gather_player_info(url):
     name = player_page.get_name()
     info = player_page.get_personal_info()
     stats = player_page.get_statistics()
-    player = Player(url, name, **info)
-    player_season_stats = PlayerSeasonStats(player.id, stats)
-    player_season_stats.save()
-    player.save()
-    player_page.close()
+    if stats is not None:
+        player = Player(url, name, **info)
+        player_season_stats = PlayerSeasonStats(player.id, stats)
+        player_season_stats.save()
+        player.save()
+        player_page.close()
 
 
 if __name__ == '__main__':
