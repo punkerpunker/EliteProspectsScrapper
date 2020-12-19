@@ -83,6 +83,7 @@ class PlayerPage:
 
     def close(self):
         self.driver.close()
+        self.driver.quit()
 
     def get_name(self):
         return self.driver.find_element_by_class_name(self.name_field).text
@@ -132,4 +133,3 @@ if __name__ == '__main__':
     num_processes = 12
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))
-
