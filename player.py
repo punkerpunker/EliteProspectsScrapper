@@ -42,7 +42,7 @@ class Player(Object):
     def save(self):
         pd.DataFrame([vars(self)]).astype(str).to_sql(self.table, con=engine, index=False, if_exists='append')
         with engine.connect() as con:
-            con.execute(f"""UPDATE {db_table} set checked = 1 where url = '{self.url}'""")
+            con.execute(f"""UPDATE {db_table} set checked = 1 where url = '{self.url.replace('%', '%%')}'""")
 
 
 class PlayerSeasonStats:
@@ -129,7 +129,7 @@ def gather_player_info(url):
 
 
 if __name__ == '__main__':
-    df = pd.read_sql(f"select url from {db_table} where checked = 0", engine)
+    df = pd.read_sql(f"select url from {db_table} where checked = 0 and url is not NULL", engine)
     num_processes = 12
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))
