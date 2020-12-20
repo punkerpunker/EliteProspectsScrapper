@@ -3,7 +3,7 @@ import tqdm
 import pandas as pd
 import sqlalchemy
 from multiprocessing import Pool
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -115,7 +115,7 @@ def gather_player_info(url):
         try:
             player_page = PlayerPage.load(url)
             break
-        except KeyError:
+        except (KeyError, WebDriverException):
             Tor.renew_connection()
     name = player_page.get_name()
     info = player_page.get_personal_info()
