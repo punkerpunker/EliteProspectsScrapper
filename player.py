@@ -15,7 +15,7 @@ capabilities["pageLoadStrategy"] = "eager"
 db_name = 'postgres'
 db_hostname = 'localhost'
 db_user = 'postgres'
-db_password = 'Vazhega1'
+db_password = 'tttBBB777'
 db_table = 'players_list'
 engine = sqlalchemy.create_engine(f'postgresql+psycopg2://{db_user}:{db_password}@{db_hostname}/{db_name}')
 
@@ -130,6 +130,6 @@ def gather_player_info(url):
 
 if __name__ == '__main__':
     df = pd.read_sql(f"select url from {db_table} where checked = 0 and url is not NULL", engine)
-    num_processes = 40
+    num_processes = 10
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))

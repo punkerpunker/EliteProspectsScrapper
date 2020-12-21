@@ -16,7 +16,7 @@ capabilities["pageLoadStrategy"] = "eager"
 db_name = 'postgres'
 db_hostname = 'localhost'
 db_user = 'postgres'
-db_password = 'Vazhega1'
+db_password = 'tttBBB777'
 db_table = 'players_list'
 
 
