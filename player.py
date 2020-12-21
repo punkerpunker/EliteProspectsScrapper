@@ -12,7 +12,6 @@ from tor import Tor
 
 capabilities = DesiredCapabilities.CHROME
 capabilities["pageLoadStrategy"] = "eager"
-proxy = 'socks5://127.0.0.1:9050'
 db_name = 'postgres'
 db_hostname = 'localhost'
 db_user = 'postgres'
@@ -70,7 +69,7 @@ class PlayerPage:
     @classmethod
     def load(cls, url, headless=True):
         options = Options()
-        options.add_argument('--proxy-server=%s' % proxy)
+        options.add_argument('--proxy-server=%s' % Tor.proxies['https'])
         options.headless = headless
         driver = webdriver.Chrome(CHROMEDRIVER_PATH, options=options,
                                   desired_capabilities=capabilities)
@@ -116,6 +115,7 @@ def gather_player_info(url):
             player_page = PlayerPage.load(url)
             break
         except (KeyError, WebDriverException):
+            print(url)
             Tor.renew_connection()
     name = player_page.get_name()
     info = player_page.get_personal_info()
@@ -130,6 +130,6 @@ def gather_player_info(url):
 
 if __name__ == '__main__':
     df = pd.read_sql(f"select url from {db_table} where checked = 0 and url is not NULL", engine)
-    num_processes = 12
+    num_processes = 40
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))

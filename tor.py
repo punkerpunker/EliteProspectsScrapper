@@ -2,9 +2,15 @@ import requests
 from stem import Signal
 from stem.control import Controller
 
+tor_ip = 'localhost'
+tor_port = 9050
+tor_password = 'tttBBB777'
+tor_controller_port = 9051
+
 
 class Tor:
-    password = "password"
+    proxies = {'http':  f'socks5://{tor_ip}:{tor_port}',
+               'https': f'socks5://{tor_ip}:{tor_port}'}
 
     def __init__(self, session):
         self.session = session
@@ -13,14 +19,13 @@ class Tor:
     def get_session(cls):
         session = requests.session()
         # Tor uses the 9050 port as the default socks port
-        session.proxies = {'http':  'socks5://127.0.0.1:9050',
-                           'https': 'socks5://127.0.0.1:9050'}
+        session.proxies = cls.proxies
         return cls(session)
 
     @staticmethod
     def renew_connection():
-        with Controller.from_port(port=9051) as controller:
-            controller.authenticate(password="password")
+        with Controller.from_port(port=tor_controller_port) as controller:
+            controller.authenticate(password=tor_password)
             controller.signal(Signal.NEWNYM)
 
     @staticmethod

@@ -1,0 +1,55 @@
+version: "3.3"
+services:
+  postgres:
+    container_name: postgres
+    restart: always
+    image: pgrouting/pgrouting:13-3.0-3.1.0
+    volumes:
+      - ./containers/postgresql/data:/var/lib/postgresql/data
+      - ./containers/postgresql/tables.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=tttBBB777
+    networks:
+      - postgresql-front
+
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: vazheningleb@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: tttBBB777
+      PGADMIN_LISTEN_PORT: 5050
+      PGADMIN_LISTEN_ADDRESS: 0.0.0.0
+    volumes:
+      - ./containers/pgadmin/data/:/var/lib/pgadmin
+    ports:
+      - "5050:5050"
+    networks:
+      - postgresql-front
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+  geocoder-tor:
+    restart: unless-stopped
+    container_name: tor
+    ports:
+      - 9050:9050
+      - 9051:9051
+    image: dperson/torproxy
+    environment:
+      - PASSWORD=tttBBB777
+    networks:
+      tor-front:
+        ipv4_address: 172.16.238.2
+
+networks:
+  postgresql-front:
+    driver: bridge
+  tor-front:
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.16.238.0/24"
