@@ -115,7 +115,6 @@ def gather_player_info(url):
             player_page = PlayerPage.load(url)
             break
         except (KeyError, WebDriverException):
-            print(url)
             Tor.renew_connection()
     name = player_page.get_name()
     info = player_page.get_personal_info()
