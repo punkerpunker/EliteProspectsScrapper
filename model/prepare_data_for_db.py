@@ -2,6 +2,7 @@ import sqlalchemy
 import pandas as pd
 from preprocessing import Players, Seasons
 
+
 db_name = 'postgres'
 db_hostname = 'localhost'
 db_user = 'postgres'
@@ -19,5 +20,5 @@ players = pd.read_sql('select * from player', engine)
 season = Seasons.preprocess(season)
 players = Players.preprocess(players)
 
-players.to_sql(django_player_table, con=django_engine, index=False)
-season.to_sql(django_player_season_table, con=django_engine, index=False)
+players.to_sql(django_player_table, con=django_engine, index=False, if_exists='replace')
+season.to_sql(django_player_season_table, con=django_engine, index=False, if_exists='replace')

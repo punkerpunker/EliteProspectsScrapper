@@ -1,8 +1,5 @@
 import pandas as pd
-import sqlalchemy
 import re
-import tqdm
-import numpy as np
 
 
 month_dict = {'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06', 
@@ -23,7 +20,8 @@ class Players:
         players['birth_country'] = players['Place of Birth'].map(lambda x: x.split(', ')[-1])
         players['birth_city'] = players['Place of Birth'].map(lambda x: x.split(', ')[0])
         players['draft_entry'] = players['Drafted'].map(lambda x: re.findall(r'#(\d+) overall', str(x)))
-        players['draft_entry'] = pd.to_numeric(players['draft_entry'].map(lambda x: x[0] if x else None), errors='coerce')
+        players['draft_entry'] = pd.to_numeric(players['draft_entry'].map(lambda x: x[0] if x else None),
+                                               errors='coerce')
         players['draft_team'] = players['Drafted'].map(lambda x: re.findall(r'by (.*)', str(x)))
         players['draft_team'] = players['draft_team'].map(lambda x: x[0] if x else None)
         players['nhl_rights'] = players['NHL Rights'].map(lambda x: str(x).split(' /')[0])
@@ -50,5 +48,5 @@ class Seasons:
             season_stats[column] = pd.to_numeric(season_stats[column], errors='coerce')
         season_stats['year'] = pd.to_datetime(season_stats['season'].map(lambda x: x.split('-')[0]), format='%Y')
         season_stats['years_passed'] = 2021 - season_stats['year'].dt.year
-        season_stats = season_stats[season_stats['games'].isnull() == False]
+        season_stats = season_stats[~season_stats['games'].isnull()]
         return season_stats
