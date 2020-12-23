@@ -18,6 +18,7 @@ chunk_size = 500000
 season = pd.read_sql('select * from player_season', engine)
 players = pd.read_sql('select * from player', engine)
 season = Seasons.preprocess(season)
+season = season.reset_index().rename(columns={season.index.name: 'id'})
 players = Players.preprocess(players)
 
 players.to_sql(django_player_table, con=django_engine, index=False, if_exists='replace')

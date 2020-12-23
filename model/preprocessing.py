@@ -2,7 +2,7 @@ import pandas as pd
 import re
 
 
-month_dict = {'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06', 
+month_dict = {'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
               'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'}
 
 
@@ -25,6 +25,7 @@ class Players:
         players['draft_team'] = players['Drafted'].map(lambda x: re.findall(r'by (.*)', str(x)))
         players['draft_team'] = players['draft_team'].map(lambda x: x[0] if x else None)
         players['nhl_rights'] = players['NHL Rights'].map(lambda x: str(x).split(' /')[0])
+        players['Age'] = pd.to_numeric(players['Age'], errors='coerce')
         players = players[cls.columns_needed]
         players.columns = players.columns.str.lower()
         return players
