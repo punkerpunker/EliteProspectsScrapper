@@ -7,6 +7,7 @@ class Features:
     dummies = ['shoots', 'birth_country', 'nhl_rights', 'draft_team']
     aggregates = ['sum', 'mean', 'max', 'min']
     stats_columns = ['games', 'goals', 'assists', 'points', 'penalty', 'plus_minus']
+    per_game_columns = [f'{x}_per_game' for x in stats_columns if x != 'games']
     
     def __init__(self, players, seasons):
         self.merged = seasons.merge(players, left_on='player_id', right_on='id')
@@ -30,31 +31,51 @@ class Features:
             self.merged.loc[self.merged['position'].str.contains(position, case=False), column] = 1
             self.merged[column].fillna(0, inplace=True)
             
+    def get_stats_per_game(self):
+        for column in self.stats_columns:
+            if column != 'games':
+                self.merged[f'{column}_per_game'] = self.merged[column] / self.merged['games']
+
     def get_dummies(self):
         self.merged = pd.concat([self.merged, pd.get_dummies(self.merged[self.dummies], drop_first=True)], axis=1)
         
     def get_aggregates(self):
         groupby_columns = ['player_id', 'season', 'postseason_flag']
-        aggregates = self.merged.groupby(groupby_columns)[self.stats_columns].sum().reset_index()
+        columns = self.stats_columns+self.per_game_columns
+        aggregates = self.merged.groupby(groupby_columns)[columns].sum().reset_index()
         regular = aggregates[aggregates['postseason_flag'] == 0].reset_index(drop=True).sort_values(['player_id', 'season'])
         playoff = aggregates[aggregates['postseason_flag'] == 1].reset_index(drop=True).sort_values(['player_id', 'season'])
-        regular = self.aggregate_rolling(regular)
-        playoff = self.aggregate_rolling(playoff)
+        regular = self.aggregate_rolling(regular, columns=columns)
+        playoff = self.aggregate_rolling(playoff, columns=columns)
         aggregated_features = regular.append(playoff, sort=False)
         shape_before = self.merged.shape[0]
-        self.merged = self.merged.merge(aggregated_features, on=['player_id', 'season', 'postseason_flag'], how='left')
+        self.merged = self.merged.merge(aggregated_features, 
+                                        on=['player_id', 'season', 'postseason_flag'], how='left')
         assert shape_before == self.merged.shape[0], "Shapes doesn't match"
         
-    def aggregate_rolling(self, df):
+    def get_lags(self):
+        groupby_columns = ['player_id', 'season', 'postseason_flag']
+        columns = self.stats_columns+self.per_game_columns
+        aggregated = self.merged.groupby(groupby_columns)[columns].sum().reset_index()
+        for shift in tqdm.tqdm([1, 2, 3]):
+            shifted = aggregated.groupby(['player_id', 'postseason_flag'])[columns].shift(shift)
+            shifted.columns = [f'{x}_{shift}_lag' for x in shifted.columns]
+            aggregated = pd.concat([aggregated, shifted], axis=1)
+        shape_before = self.merged.shape[0]
+        self.merged = self.merged.merge(aggregated.drop(columns, axis=1), 
+                                        on=['player_id', 'season', 'postseason_flag'], how='left')
+        assert shape_before == self.merged.shape[0], "Shapes doesn't match"
+        
+    def aggregate_rolling(self, df, columns):
         max_window = 50
         aggregations = []
         for function in tqdm.tqdm(self.aggregates):
-            aggr = getattr(df.groupby(['player_id'])[self.stats_columns].rolling(max_window, 1), function)()
-            aggr = aggr.groupby('player_id')[self.stats_columns].shift()
+            aggr = getattr(df.groupby(['player_id'])[columns].rolling(max_window, 1), function)()
+            aggr = aggr.groupby('player_id')[columns].shift()
             aggr.columns = [f'{function}_{x}' for x in aggr.columns]
             aggregations.append(aggr.reset_index(drop=True))
         df = df.merge(pd.concat(aggregations, axis=1), left_index=True, right_index=True)
-        df = df.drop(self.stats_columns, axis=1)
+        df = df.drop(columns, axis=1)
         return df
     
     def gather_all_features(self):
@@ -65,6 +86,10 @@ class Features:
         self.get_position()
         print('Gathering dummies...')
         self.get_dummies()
+        print('Gathering per-game stats...')
+        self.get_stats_per_game()
+        print('Gathering lags stats...')
+        self.get_lags()
         print('Gathering aggregates...')
         self.get_aggregates()
         return self.merged
