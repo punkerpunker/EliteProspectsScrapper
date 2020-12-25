@@ -8,9 +8,16 @@ class Features:
     aggregates = ['sum', 'mean', 'max', 'min']
     stats_columns = ['games', 'goals', 'assists', 'points', 'penalty', 'plus_minus']
     per_game_columns = [f'{x}_per_game' for x in stats_columns if x != 'games']
+    indicators = stats_columns + per_game_columns + ['league_rating']
     
     def __init__(self, players, seasons):
         self.merged = seasons.merge(players, left_on='player_id', right_on='id')
+        
+    def get_league_rating(self):
+        rating = self.merged[self.merged['draft_entry'].isnull() == False].league.value_counts().reset_index()
+        rating.columns = ['league', 'league_rating']
+        self.merged = self.merged.merge(rating, on='league')
+        self.merged['league_rating'].fillna(0, inplace=True)
     
     def get_age_at_season(self):
         self.merged['age'] = (self.merged['year'] - self.merged['date_of_birth']) / np.timedelta64(1, 'Y')
@@ -41,7 +48,7 @@ class Features:
         
     def get_aggregates(self):
         groupby_columns = ['player_id', 'season', 'postseason_flag']
-        columns = self.stats_columns+self.per_game_columns
+        columns = self.indicators
         aggregates = self.merged.groupby(groupby_columns)[columns].sum().reset_index()
         regular = aggregates[aggregates['postseason_flag'] == 0].reset_index(drop=True).sort_values(['player_id', 'season'])
         playoff = aggregates[aggregates['postseason_flag'] == 1].reset_index(drop=True).sort_values(['player_id', 'season'])
@@ -55,7 +62,7 @@ class Features:
         
     def get_lags(self):
         groupby_columns = ['player_id', 'season', 'postseason_flag']
-        columns = self.stats_columns+self.per_game_columns
+        columns = self.indicators
         aggregated = self.merged.groupby(groupby_columns)[columns].sum().reset_index()
         for shift in tqdm.tqdm([1, 2, 3]):
             shifted = aggregated.groupby(['player_id', 'postseason_flag'])[columns].shift(shift)
@@ -79,6 +86,9 @@ class Features:
         return df
     
     def gather_all_features(self):
+        print('Gathering league ratings...')
+        self.get_league_rating()
+        print("Gathering age...")
         self.get_age_at_season()
         print("Gathering nationalities...")
         self.get_nationality()
