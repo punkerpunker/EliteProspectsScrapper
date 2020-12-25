@@ -48,7 +48,7 @@ class Features:
         
     def get_aggregates(self):
         groupby_columns = ['player_id', 'season', 'postseason_flag']
-        columns = self.indicators
+        columns = self.stats_columns
         aggregates = self.merged.groupby(groupby_columns)[columns].sum().reset_index()
         regular = aggregates[aggregates['postseason_flag'] == 0].reset_index(drop=True).sort_values(['player_id', 'season'])
         playoff = aggregates[aggregates['postseason_flag'] == 1].reset_index(drop=True).sort_values(['player_id', 'season'])
