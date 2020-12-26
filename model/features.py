@@ -49,6 +49,7 @@ class Features:
     def get_aggregates(self):
         groupby_columns = ['player_id', 'season', 'postseason_flag']
         columns = self.stats_columns
+        self.merged[columns] = self.merged[columns].fillna(0)
         aggregates = self.merged.groupby(groupby_columns)[columns].sum().reset_index()
         regular = aggregates[aggregates['postseason_flag'] == 0].reset_index(drop=True).sort_values(['player_id', 'season'])
         playoff = aggregates[aggregates['postseason_flag'] == 1].reset_index(drop=True).sort_values(['player_id', 'season'])
@@ -63,7 +64,8 @@ class Features:
     def get_lags(self):
         groupby_columns = ['player_id', 'season', 'postseason_flag']
         columns = self.indicators
-        aggregated = self.merged.groupby(groupby_columns)[columns].sum().reset_index()
+        self.merged[columns] = self.merged[columns].fillna(0)
+        aggregated = self.merged.groupby(groupby_columns, dropna=False)[columns].sum().reset_index()
         for shift in tqdm.tqdm([1, 2, 3]):
             shifted = aggregated.groupby(['player_id', 'postseason_flag'])[columns].shift(shift)
             shifted.columns = [f'{x}_{shift}_lag' for x in shifted.columns]
