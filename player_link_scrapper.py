@@ -1,9 +1,10 @@
 from typing import Dict
 import sqlalchemy
+import time
 import pandas as pd
 from settings import CHROMEDRIVER_PATH
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -31,7 +32,7 @@ class PlayersSearch:
         self.driver = driver
 
     @classmethod
-    def load(cls, headless=False):
+    def load(cls, headless=True):
         options = Options()
         options.headless = headless
         driver = webdriver.Chrome(CHROMEDRIVER_PATH, options=options,
@@ -76,15 +77,29 @@ def save_table(df):
         con.execute(f"""CREATE INDEX url_index_btree ON {db_table} USING btree(url)""")
 
 
-if __name__ == '__main__':
-    filename = 'forwards.csv'
-    p = PlayersSearch.load()
-    p.get_player_list({'position': "Forwards"})
+def get_page_urls(page, num_retries=5):
+    retry = 0
+    while retry < num_retries:
+        try:
+            page_urls = pd.DataFrame({'url': page.get_page_urls()})
+            return page_urls
+        except ElementClickInterceptedException:
+            time.sleep(5)
+            retry += 1
+    raise TimeoutException
 
+
+if __name__ == '__main__':
+    filename = 'defenseman.csv'
+    p = PlayersSearch.load()
+    p.get_player_list({'position': "Defensemen"})
     i = 0
     while True:
-        urls = pd.DataFrame({'url': p.get_page_urls()})
-        print(urls)
+        try:
+            urls = get_page_urls(p)
+        except TimeoutException:
+            continue
+
         if i == 0:
             urls.to_csv(filename, mode='a', index=False)
             i += 1
