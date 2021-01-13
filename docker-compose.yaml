@@ -1,7 +1,7 @@
 version: "3.3"
 services:
-  postgres:
-    container_name: postgres
+  postgresql:
+    container_name: postgresql
     restart: always
     image: pgrouting/pgrouting:13-3.0-3.1.0
     volumes:
@@ -30,9 +30,9 @@ services:
       - postgresql-front
     restart: unless-stopped
     depends_on:
-      - postgres
+      - postgresql
 
-  geocoder-tor:
+  tor:
     restart: unless-stopped
     container_name: tor
     ports:
