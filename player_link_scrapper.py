@@ -72,9 +72,9 @@ class PlayersSearch:
 def save_table(df):
     df['checked'] = 0
     engine = sqlalchemy.create_engine(f'postgresql+psycopg2://{db_user}:{db_password}@{db_hostname}/{db_name}')
-    df.to_sql(db_table, con=engine, index=False)
+    df.to_sql(db_table, con=engine, index=False, if_exists='append')
     with engine.connect() as con:
-        con.execute(f"""CREATE INDEX url_index_btree ON {db_table} USING btree(url)""")
+        con.execute(f"""CREATE INDEX IF NOT EXISTS url_index_btree ON {db_table} USING btree(url)""")
 
 
 def get_page_urls(page, num_retries=5):
