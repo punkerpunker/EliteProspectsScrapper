@@ -1,5 +1,6 @@
 import uuid
 import tqdm
+import time
 import pandas as pd
 import sqlalchemy
 from multiprocessing import Pool
@@ -112,6 +113,7 @@ class PlayerPage:
 def gather_player_info(url):
     while True:
         try:
+            print(url)
             player_page = PlayerPage.load(url)
             break
         except (KeyError, WebDriverException):
@@ -129,6 +131,6 @@ def gather_player_info(url):
 
 if __name__ == '__main__':
     df = pd.read_sql(f"select url from {db_table} where checked = 0 and url is not NULL", engine)
-    num_processes = 12
+    num_processes = 6
     with Pool(num_processes) as p:
         list(tqdm.tqdm(p.imap(gather_player_info, df['url'].tolist()), total=df.shape[0]))
