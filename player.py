@@ -123,7 +123,11 @@ def gather_player_info(url):
     if stats is not None:
         player = Player(url, name, **info)
         player_season_stats = PlayerSeasonStats(player.id, stats)
-        player_season_stats.save()
+        try:
+            player_season_stats.save()
+        except Exception as e:
+            player_season_stats.to_csv('broken.csv')
+            raise e
         player.save()
     player_page.close()
 
